@@ -1,28 +1,37 @@
 const express = require("express");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
 const router = express.Router();
 
-// Configure Cloudinary
+// Cloudinary Config
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
-// Configure Multer
-const storage = multer.memoryStorage(); // ❌ Temporary storage (should be fixed)
+// Multer Storage Setup
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "uploads",
+    allowed_formats: ["jpg", "png", "jpeg", "webp"],
+  },
+});
+
 const upload = multer({ storage });
 
-// File Upload API
-router.post("/upload", upload.single("file"), async (req, res) => {
+// Route to Upload File
+router.post("/upload", upload.single("file"), (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-    const result = await cloudinary.uploader.upload(req.file.buffer); // ❌ Wrong method (students should fix)
-
-    res.json({ url: result.secure_url });
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ error: "File not uploaded properly" });
+    }
+    res.status(200).json({ url: req.file.path });
   } catch (error) {
+    console.error("Upload error:", error);
     res.status(500).json({ error: "Upload failed" });
   }
 });
